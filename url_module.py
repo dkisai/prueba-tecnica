@@ -9,6 +9,37 @@ import psycopg2
 
 logger = logging.getLogger(__name__)
 
+def run_url_process(config_path: str = "metrobus_config.ini") -> None:
+    """
+    Ejemplo de proceso que:
+      1. Obtiene token
+      2. Envía correo GTFS
+      3. (Opcional) Actualiza la tabla gtfs_links
+    """
+    cfg = configparser.ConfigParser()
+    cfg.read(config_path)
+
+    correo = cfg["DEFAULT"].get("correo", "")
+    password_correo = cfg["DEFAULT"].get("password", "")
+    imap_server = cfg["DEFAULT"].get("imap_server", "imap.gmail.com")
+
+    # ... Lógica para obtener token (API), enviar correo, etc. ...
+    # Ejemplo con tu code (simplificado):
+    
+    token_data = obtener_token(correo)
+    if not token_data:
+        logger.error("No se pudo obtener token para %s", correo)
+        return
+    
+    if not enviar_correo_gtfs(correo, token_data):
+        logger.error("Error al enviar correo GTFS.")
+        return
+    
+    # Supongamos que en vez de leer link, lo guardamos en la tabla 'gtfs_links':
+    link = "https://fake-link-latest/Metrobus_GTFS_RT.proto"  # <-- Ejemplo
+    almacenar_link_en_bd(cfg, link)
+    logger.info("Proceso URL finalizado.")
+
 def obtener_token(correo: str) -> Optional[Dict]:
     """
     Solicita a la API el token asociado a 'correo'.
