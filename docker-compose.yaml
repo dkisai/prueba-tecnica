@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:14
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: "pruebas_akron"
+      POSTGRES_USER: "dkisai"
+      POSTGRES_PASSWORD: "dkisai"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "dkisai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow:
+    image: apache/airflow:2.6.2
+    container_name: airflow_container
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Ajustamos la DB para Airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://dkisai:dkisai@db:5432/pruebas_akron
+
+      # Usuario admin de Airflow
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+      _AIRFLOW_WWW_USER_EMAIL: admin@example.com
+      _AIRFLOW_WWW_USER_FIRSTNAME: Admin
+      _AIRFLOW_WWW_USER_LASTNAME: User
+    volumes:
+      - ./dags:/opt/airflow/dags  # Monta la carpeta local 'dags/' como DAGs de Airflow
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+      airflow db init &&
+      airflow users create
+        --username $${_AIRFLOW_WWW_USER_USERNAME}
+        --password $${_AIRFLOW_WWW_USER_PASSWORD}
+        --firstname $${_AIRFLOW_WWW_USER_FIRSTNAME}
+        --lastname $${_AIRFLOW_WWW_USER_LASTNAME}
+        --role Admin
+        --email $${_AIRFLOW_WWW_USER_EMAIL} || true &&
+      airflow webserver & airflow scheduler
+      "
+
+  fastapi:
+    build: .      # Build desde el Dockerfile en la raíz (my_project/Dockerfile)
+    container_name: fastapi_app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Pasamos variables de entorno al contenedor (opcionales)
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_USER: "dkisai"
+      DATABASE_PASSWORD: "dkisai"
+      DATABASE_DBNAME: "pruebas_akron"
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
