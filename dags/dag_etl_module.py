@@ -1,9 +1,8 @@
-# dag_etl_module.py
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
 
-from etl_module import run_etl_process
+from app.etl_module import run_etl_process
 
 default_args = {
     'owner': 'dkisai',

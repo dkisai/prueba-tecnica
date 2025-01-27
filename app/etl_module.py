@@ -2,9 +2,7 @@
 from __future__ import annotations
 import logging
 import configparser
-import os
 import re
-import time
 from datetime import datetime, timedelta
 
 # Dependencias ETL
@@ -31,28 +29,26 @@ def run_etl_process(config_path: str = "metrobus_config.ini") -> None:
       5. Inserta/actualiza datos en PostgreSQL (UPSERT)
     """
 
-    # 1) Leemos la configuración desde 'metrobus_config.ini'
     cfg = configparser.ConfigParser()
     cfg.read(config_path)
 
     # Extraemos DB_CONFIG desde la sección [DATABASE]
     db_config = {
-        "host": cfg["DATABASE"].get("host", "localhost"),
-        "port": cfg["DATABASE"].getint("port", 5432),
-        "dbname": cfg["DATABASE"].get("dbname", "prueba_akron"),
-        "user": cfg["DATABASE"].get("user", "dkisai"),
-        "password": cfg["DATABASE"].get("password", "dkisai"),
+        "host": cfg["DATABASE"]["host"], 
+        "port": cfg["DATABASE"]["port"],
+        "dbname": cfg["DATABASE"]["dbname"],
+        "user": cfg["DATABASE"]["user"],
+        "password": cfg["DATABASE"]["password"],
     }
     
-    # Paths y parámetros adicionales, si quieres ponerlos en [DEFAULT] o [ETL]
     JDBC_DRIVER_PATH = cfg["DEFAULT"].get("jdbc_driver_path", "postgresql-42.7.5.jar")
     GEOJSON_PATH = cfg["DEFAULT"].get("geojson_path", "alcaldias/poligonos_alcaldias_cdmx.shp")
 
-    # 2) Validamos base de datos y tablas (ver funciones abajo)
+    # Validamos base de datos y tablas necesarias
     ensure_database(db_config)
     ensure_tables(db_config)
 
-    # 3) Iniciamos Spark
+    # Iniciamos Spark
     spark = SparkSession.builder \
         .appName("GTFS-Vehicle-Alcaldia") \
         .config("spark.sql.encoding", "UTF-8") \
@@ -61,24 +57,19 @@ def run_etl_process(config_path: str = "metrobus_config.ini") -> None:
         .getOrCreate()
 
     try:
-        # 4) Cargamos los límites de las alcaldías
         alcaldias = load_alcaldias(GEOJSON_PATH)
 
-        # 5) Obtenemos la última URL (<= 11 horas)
         url = get_latest_url(db_config)
         if not url:
             logger.warning("No se encontró una URL válida en 'gtfs_links'.")
             return
 
-        # 6) Descargamos y procesamos el feed GTFS
         vehicles = download_gtfs_feed(url)
         logger.info("Se obtuvieron %d registros de vehículos.", len(vehicles))
 
-        # 7) Asignar alcaldías
         vehicles_with_alcaldias = assign_alcaldias(vehicles, alcaldias)
         logger.info("Se asignaron alcaldías a los vehículos.")
 
-        # 8) Guardar datos en PostgreSQL con upsert
         save_to_postgres_with_upsert(spark, vehicles_with_alcaldias, db_config)
         logger.info("Datos procesados y guardados exitosamente.")
 

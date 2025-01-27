@@ -1,4 +1,5 @@
 import logging
+import configparser
 import re
 import imaplib
 import email
@@ -22,9 +23,6 @@ def run_url_process(config_path: str = "metrobus_config.ini") -> None:
     correo = cfg["DEFAULT"].get("correo", "")
     password_correo = cfg["DEFAULT"].get("password", "")
     imap_server = cfg["DEFAULT"].get("imap_server", "imap.gmail.com")
-
-    # ... Lógica para obtener token (API), enviar correo, etc. ...
-    # Ejemplo con tu code (simplificado):
     
     token_data = obtener_token(correo)
     if not token_data:
@@ -35,8 +33,7 @@ def run_url_process(config_path: str = "metrobus_config.ini") -> None:
         logger.error("Error al enviar correo GTFS.")
         return
     
-    # Supongamos que en vez de leer link, lo guardamos en la tabla 'gtfs_links':
-    link = "https://fake-link-latest/Metrobus_GTFS_RT.proto"  # <-- Ejemplo
+    link = obtener_link_gtfs(imap_server, correo, password_correo)
     almacenar_link_en_bd(cfg, link)
     logger.info("Proceso URL finalizado.")
 

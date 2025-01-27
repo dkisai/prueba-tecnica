@@ -1,11 +1,8 @@
-# dag_url_module.py
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-import logging
+from airflow.operators.python import PythonOperator
 
-# Importamos nuestra función principal del url_module
-from url_module import run_url_process
+from app.url_module import run_url_process
 
 default_args = {
     'owner': 'dkisai',
