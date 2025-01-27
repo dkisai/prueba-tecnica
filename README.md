@@ -1,6 +1,4 @@
-# Generar el archivo README.md con el contenido generado
-
-content = """# Proyecto Metrobus - FastAPI + Airflow + Postgres
+# Proyecto Metrobus - FastAPI + Airflow + Postgres
 
 Este proyecto tiene como objetivo:
 
