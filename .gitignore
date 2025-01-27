@@ -2,3 +2,4 @@ metrobus_config.ini
 __pycache__/
 .DS_Store
 app.log
+venv-py310/
